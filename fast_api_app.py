@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path, Query, HTTPException
+from starlette import status
 
 from models.travel_destinations import TravelDestination, TravelDestinationRequest
 
@@ -18,15 +19,15 @@ destination_objects = [
     for i, dest in enumerate(destinations, start=1)
 ]
 
-@app.get("/health")
+@app.get("/health", status_code= status.HTTP_200_OK)
 async def health():
     return {"status": "ok"}
 
-@app.get("/travel_destinations")
+@app.get("/travel_destinations", status_code= status.HTTP_200_OK)
 async def get_travel_destinations():
     return destination_objects
 
-@app.get("/travel_destinations/{country}")
+@app.get("/travel_destinations/{country}", status_code= status.HTTP_200_OK)
 async def get_country_travel_destinations(country: str, city: str = None):
     country_destinations = []
     for destination in destination_objects:
@@ -37,21 +38,31 @@ async def get_country_travel_destinations(country: str, city: str = None):
                 country_destinations.append(destination)
     return country_destinations
 
-@app.post("/travel_destinations/create_travel_destination")
+@app.post("/travel_destinations/create_travel_destination", status_code= status.HTTP_201_CREATED)
 async def create_travel_destinations(new_destination: TravelDestinationRequest):
     new_dest =TravelDestination(**new_destination.model_dump())
     destination_objects.append(new_dest)
 
-@app.put("/travel_destinations/{city}")
-async def update_travel_destinations(city: str, new_destination: TravelDestinationRequest):
+@app.put("/travel_destinations/{city}", status_code= status.HTTP_200_OK)
+async def update_travel_destinations(city: str = Path(description="Name of City"),
+                                     new_destination: TravelDestinationRequest = Query(description="New Destination")):
+    found = False
     for i in range(len(destination_objects)):
         if destination_objects[i].city == city:
             new_dest = TravelDestination(**new_destination.model_dump())
             destination_objects[i] = new_dest
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="City not found")
 
-@app.delete("/travel_destinations/{city}")
+@app.delete("/travel_destinations/{city}", status_code= status.HTTP_204_NO_CONTENT)
 async def delete_travel_destinations(city: str):
+    found = False
     for i in range(len(destination_objects)):
         if destination_objects[i].city == city:
             destination_objects.pop(i)
+            found = True
             break
+    if not found:
+        raise HTTPException(status_code=404, detail="City not found")
