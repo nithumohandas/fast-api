@@ -1,68 +1,44 @@
-from fastapi import FastAPI, Path, Query, HTTPException
-from starlette import status
+from typing import Annotated
 
-from models.travel_destinations import TravelDestination, TravelDestinationRequest
+from fastapi import FastAPI, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from starlette import status
+from starlette.middleware.cors import CORSMiddleware
+
+from db import create_db_and_tables
+from dependencies import get_query_token
+from routers.travel_destinations import travel_destinations_router
+from routers.users import user_router
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
 
-destinations = [
-    {'city': 'Bali', 'country': 'Vietnam', 'feature': 'Tropical beaches and vibrant culture'},
-    {'city': 'Kerala', 'country': 'India', 'feature': 'Backwaters and Ayurvedic retreats'},
-    {'city': 'Lucerne', 'country': 'Switzerland', 'feature': 'Lake views and medieval architecture'},
-    {'city': 'Zurich', 'country': 'Switzerland', 'feature': 'Financial hub with scenic old town'},
-    {'city': 'Kashmir', 'country': 'India', 'feature': 'Snowy mountains and houseboats'},
-    {'city': 'Tokyo', 'country': 'Japan', 'feature': 'Modern cityscape and traditional temples'}
+app.include_router(user_router)
+app.include_router(travel_destinations_router)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
 ]
 
-destination_objects = [
-    TravelDestination(id=i, **dest)
-    for i, dest in enumerate(destinations, start=1)
-]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
 
 @app.get("/health", status_code= status.HTTP_200_OK)
 async def health():
     return {"status": "ok"}
 
-@app.get("/travel_destinations", status_code= status.HTTP_200_OK)
-async def get_travel_destinations():
-    return destination_objects
+@app.post("/token")
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    return {"access_token": form_data.username, "token_type": "bearer"}
 
-@app.get("/travel_destinations/{country}", status_code= status.HTTP_200_OK)
-async def get_country_travel_destinations(country: str, city: str = None):
-    country_destinations = []
-    for destination in destination_objects:
-        if destination.country == country:
-            if city and destination.city == city:
-                country_destinations.append(destination)
-            elif city is None:
-                country_destinations.append(destination)
-    return country_destinations
-
-@app.post("/travel_destinations/create_travel_destination", status_code= status.HTTP_201_CREATED)
-async def create_travel_destinations(new_destination: TravelDestinationRequest):
-    new_dest =TravelDestination(**new_destination.model_dump())
-    destination_objects.append(new_dest)
-
-@app.put("/travel_destinations/{city}", status_code= status.HTTP_200_OK)
-async def update_travel_destinations(city: str = Path(description="Name of City"),
-                                     new_destination: TravelDestinationRequest = Query(description="New Destination")):
-    found = False
-    for i in range(len(destination_objects)):
-        if destination_objects[i].city == city:
-            new_dest = TravelDestination(**new_destination.model_dump())
-            destination_objects[i] = new_dest
-            found = True
-            break
-    if not found:
-        raise HTTPException(status_code=404, detail="City not found")
-
-@app.delete("/travel_destinations/{city}", status_code= status.HTTP_204_NO_CONTENT)
-async def delete_travel_destinations(city: str):
-    found = False
-    for i in range(len(destination_objects)):
-        if destination_objects[i].city == city:
-            destination_objects.pop(i)
-            found = True
-            break
-    if not found:
-        raise HTTPException(status_code=404, detail="City not found")

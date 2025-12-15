@@ -1,22 +1,7 @@
-from typing import Optional
+from sqlmodel import Field, SQLModel
 
-from pydantic import BaseModel, Field
-
-
-class TravelDestination:
-    id: int
+class TravelDestinations(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
     city: str
     country: str
     feature: str
-
-    def __init__(self, id, city, country, feature):
-        self.id = id
-        self.city = city
-        self.country = country
-        self.feature = feature
-
-class TravelDestinationRequest(BaseModel):
-    id: Optional[int] = Field(description="Travel Destination ID", default=None)
-    city: str = Field(alias="City", min_length=4)
-    country: str = Field(alias="Country", min_length=4)
-    feature: str = Field(alias="Feature", min_length=10)
