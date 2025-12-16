@@ -1,23 +1,19 @@
 from fastapi import APIRouter, Depends
+from schemas.users import UserResponse
+from dependencies import get_current_user_remote
 
-from dependencies import get_token_header
+router = APIRouter(prefix="/users", tags=["Users"])
 
-user_router = APIRouter(
-    tags=["users"],
-    dependencies=[Depends(get_token_header)]
-)
+@router.get("/me", response_model=UserResponse)
+async def read_users_me(current_user: dict = Depends(get_current_user_remote)):
+    return current_user
 
+@router.get("/profile", response_model=UserResponse)
+async def read_user_profile(current_user: dict = Depends(get_current_user_remote)):
+    # This endpoint also requires authentication
+    return current_user
 
-@user_router.get("/users/", tags=["users"])
-async def read_users():
-    return [{"username": "Rick"}, {"username": "Morty"}]
-
-
-@user_router.get("/users/me", tags=["users"])
-async def read_user_me():
-    return {"username": "fakecurrentuser"}
-
-
-@user_router.get("/users/{username}", tags=["users"])
-async def read_user(username: str):
-    return {"username": username}
+@router.put("/me")
+async def update_user_me(current_user: dict = Depends(get_current_user_remote)):
+    # Example protected endpoint
+    return {"message": f"Update profile for {current_user['username']}"}
