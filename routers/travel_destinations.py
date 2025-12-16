@@ -2,6 +2,7 @@ from time import sleep
 
 from fastapi import APIRouter, HTTPException, Path, Query, BackgroundTasks
 from starlette import status
+from fastapi.responses import StreamingResponse
 
 from schemas.travel_destinations import TravelDestination
 
@@ -69,3 +70,11 @@ async def delete_travel_destinations(city: str):
             break
     if not found:
         raise HTTPException(status_code=404, detail="City not found")
+
+async def fake_video_streamer():
+    for i in range(10):
+        yield b"some fake video bytes"
+
+@router.get("/streaming", status_code= status.HTTP_200_OK)
+async def main():
+    return StreamingResponse(fake_video_streamer())

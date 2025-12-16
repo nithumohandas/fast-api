@@ -78,7 +78,7 @@ async def register(user: UserCreate):
     return user_dict
 
 
-@router.post("/validate", response_model=TokenValidationResponse)
+@router.post("/validate", response_model=TokenValidationResponse, include_in_schema=False)
 async def validate_token(authorization: str = Header(...)):
     """
     Endpoint for remote servers to validate JWT tokens

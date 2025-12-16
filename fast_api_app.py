@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from routers import secure_api
 from routers import travel_destinations
 
+
 app = FastAPI(
     title="Remote API Service",
     description="Service that validates JWT tokens from auth server",
